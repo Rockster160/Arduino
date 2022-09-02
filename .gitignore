@@ -1,0 +1,14 @@
+# Everything!
+*/*
+notes.txt
+
+libraries
+GxEPD2_Example
+
+# Allow helpers through
+!/libraries
+!/libraries/Pins
+!/libraries/WifiHelpers
+
+# Specific Files
+!GroceryList/*

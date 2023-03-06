@@ -9,6 +9,8 @@ GxEPD2_Example
 !/libraries
 !/libraries/Pins
 !/libraries/WifiHelpers
+!/libraries/WifiBtn
 
 # Specific Files
-!GroceryList/*
+!espBtn/*
+# !SomeFile/*

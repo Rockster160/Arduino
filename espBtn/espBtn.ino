@@ -18,7 +18,12 @@ const int off[3] = { 0, 0, 0 };
 const int dim_yel[3] = { 100, 60, 0 };
 const int dim_red[3] = { 100, 0, 0 };
 
+int currentR = 0;
+int currentG = 0;
+int currentB = 0;
+
 unsigned long onUntil = 0;
+unsigned long flashInterval = 0;
 const String data = "{\\\"btn_id\\\":\\\"" + btn_id + "\\\"}";
 // ruby -e 'require "json"; p({                                                                                                                                                                                                                     0.120s
 //   event_name: "Pullups",
@@ -84,6 +89,15 @@ void loop() {
   if (onUntil > 0 && onUntil < millis()) {
     setRGB(off);
     onUntil = 0;
+    flashInterval = 0;
+  }
+  if (flashInterval > 0) {
+    if (millis() % (flashInterval*2) < flashInterval) {
+      setRGB(off);
+    } else {
+      int rgb[3] = { currentR, currentG, currentB };
+      setRGB(rgb);
+    }
   }
 
   if (!debounce()) { return; }
@@ -121,7 +135,7 @@ void onMessageCallback(WebsocketsMessage message) {
 
   const char* rgbstart = strstr(message.c_str(), "\"rgb\":\""); // find the start of the "rgb" key
   if (rgbstart != NULL) {
-    rgbstart += 7; // skip the length of the key "rgb" and the delimiter ":"
+    rgbstart += 7; // "rgb":" skip the length of the key "rgb" and the delimiter ":"
     const char* rgbend = strchr(rgbstart, '\"'); // find the end of the value string
     if (rgbend != NULL) {
       int r, g, b;
@@ -136,14 +150,19 @@ void onMessageCallback(WebsocketsMessage message) {
         Serial.print(b);
         Serial.println(")");
       }
+      currentR = r;
+      currentG = g;
+      currentB = b;
       setRGB(rgb);
     }
   }
 
-  const char* untilstart = strstr(message.c_str(), "\"for_ms\":\""); // for_ms is expected to be str
-  if (untilstart != NULL) {
+  onUntil = 0; // Reset in case the next update doesn't include values
+  const char* untilstart = strstr(message.c_str(), "\"for_ms\":\"");
+  const char* untilempty = strstr(message.c_str(), "\"for_ms\":\"\"");
+  if (untilstart != NULL && untilempty == NULL) {
     if (debugMode) { Serial.println("Found for_ms"); }
-    untilstart += 10;
+    untilstart += 10; // "for_ms":"
     const char* untilend = strchr(untilstart, '\"'); // find the end of the value string
     if (untilend != NULL) {
       int until;
@@ -152,7 +171,29 @@ void onMessageCallback(WebsocketsMessage message) {
         Serial.print("Until:");
         Serial.println(until);
       }
-      onUntil = millis() + until;
+      if (until > 0) {
+        onUntil = millis() + until;
+      }
+    }
+  }
+
+  flashInterval = 0; // Reset in case the next update doesn't include values
+  const char* flashstart = strstr(message.c_str(), "\"flash\":\"");
+  const char* flashempty = strstr(message.c_str(), "\"flash\":\"\"");
+  if (flashstart != NULL && flashempty == NULL) {
+    if (debugMode) { Serial.println("Found flash"); }
+    flashstart += 9; // "flash":"
+    const char* flashend = strchr(flashstart, '\"');
+    if (flashend != NULL) {
+      int flash;
+      sscanf(flashstart, "%d", &flash);
+      if (debugMode) {
+        Serial.print("Flash:");
+        Serial.println(flash);
+      }
+      if (flash > 0) {
+        flashInterval = flash;
+      }
     }
   }
 }

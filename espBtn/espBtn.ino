@@ -1,15 +1,31 @@
-// TODO: Allow for multiple btns/leds
 #include <stdarg.h>
 #include <string.h>
 #include "Pins.h"
 #include "WifiHelpers.h"
 
 // ================================ Configure
-const String btn_id = "demo";
+const String channelId = "ring";
 const int wifi = BasementWifi; // BasementWifi UpstairsWifi
 // ================================ / Configure
 
-const int btnPin = D4;
+// const int btnPin = D4;
+const int btnCount = 6;
+const int btns[btnCount] = {
+  D4,
+  D8,
+  D7,
+  D6,
+  D5,
+  D0,
+};
+const String btnIds[btnCount] = {
+  "blue",
+  "red",
+  "yel",
+  "grn",
+  "org",
+  "gry",
+};
 const int redPin = D3;
 const int greenPin = D2;
 const int bluePin = D1;
@@ -24,7 +40,7 @@ int currentB = 0;
 
 unsigned long onUntil = 0;
 unsigned long flashInterval = 0;
-const String data = "{\\\"btn_id\\\":\\\"" + btn_id + "\\\"}";
+// const String data = "{\\\"btn_id\\\":\\\"" + channelId + "\\\"}";
 // ruby -e 'require "json"; p({                                                                                                                                                                                                                     0.120s
 //   event_name: "Pullups",
 //   notes: "5",
@@ -37,7 +53,10 @@ unsigned long debounceDelay = 2000;
 
 void setup() {
   Serial.begin(115200);
-  pinMode(btnPin, INPUT_PULLUP);
+  // pinMode(btnPin, INPUT_PULLUP);
+  for (int i=0; i<btnCount; i++) {
+    pinMode(btns[i], INPUT_PULLUP);
+  }
   for (int thisColor = 0; thisColor < 3; thisColor++) {
     pinMode(colorPins[thisColor], OUTPUT);
   }
@@ -46,7 +65,7 @@ void setup() {
   wifiInit(
     debugMode ? BasementWifi : wifi,
     // Should probably authorize this...
-    String("{\"command\":\"subscribe\",\"identifier\":\"{\\\"channel\\\":\\\"TaskChannel\\\",\\\"channel_id\\\":\\\"") + btn_id + String("\\\"}\"}"),
+    String("{\"command\":\"subscribe\",\"identifier\":\"{\\\"channel\\\":\\\"TaskChannel\\\",\\\"channel_id\\\":\\\"") + channelId + String("\\\"}\"}"),
     getState,
     onMessageCallback
   );
@@ -58,8 +77,15 @@ void setRGB(const int colRGB[3]) {
   }
 }
 
-bool btnPressed() {
+bool btnPressed(int btnPin) {
   return digitalRead(btnPin) == LOW; // Low because pullup and ground connection
+}
+
+bool anyPressed() {
+  for (int i=0; i<btnCount; i++) {
+    if (btnPressed(btns[i])) { return true; }
+  }
+  return false;
 }
 
 void loop() {
@@ -103,26 +129,28 @@ void loop() {
   if (!debounce()) { return; }
 
   if (pressed) {
-    if (!btnPressed()) {
+    if (!anyPressed()) {
       if (debugMode) { Serial.println("Released"); }
       pressed = false;
     }
   } else {
-    if (btnPressed()) {
-      if (debugMode) { Serial.println("Pressed"); }
-      pressed = true;
-      lastDebounceTime = millis();
-      post();
+    for (int i=0; i<btnCount; i++) {
+      if (btnPressed(btns[i])) {
+        if (debugMode) { Serial.print("Pressed: "); Serial.println(btnIds[i]); }
+        pressed = true;
+        lastDebounceTime = millis();
+        post(btnIds[i]);
+      }
     }
   }
 }
 
-void post() {
-  String str = "{\"command\":\"message\",\"identifier\":\"{\\\"channel\\\":\\\"TaskChannel\\\",\\\"channel_id\\\":\\\"" + btn_id + "\\\"}\",\"data\":\"";
-  str += data;
+void post(String btnId) {
+  String str = "{\"command\":\"message\",\"identifier\":\"{\\\"channel\\\":\\\"TaskChannel\\\",\\\"channel_id\\\":\\\"" + channelId + "\\\"}\",\"data\":\"";
+  str += "{\\\"btn_id\\\":\\\"" + btnId + "\\\"}";
   str += "\"}";
   client.send(str);
-  if (debugMode) { Serial.println("Sent!"); }
+  if (debugMode) { Serial.print("Sent: "); Serial.println(btnId); }
 }
 
 void getState() {

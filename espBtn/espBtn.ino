@@ -4,32 +4,30 @@
 #include "WifiHelpers.h"
 
 // ================================ Configure
-const String channelId = "ring";
+const String channelId = "demo";
 const int wifi = BasementWifi; // BasementWifi UpstairsWifi
 // ================================ / Configure
 
-// const int btnPin = D4;
 const int btnCount = 6;
+const String btnIds[btnCount] = {
+  "blu",
+  "org",
+  "yel",
+  "red",
+  "wht",
+  "grn"
+};
+// Do not use D8, D0, A0, RX, or TX as inputs - they require external resistors or are not GPIO
+// CAN use these pins as output
 const int btns[btnCount] = {
   D4,
-  D8,
-  D7,
   D6,
+  D3,
+  D2,
+  D1,
   D5,
-  D0,
 };
-const String btnIds[btnCount] = {
-  "blue",
-  "red",
-  "yel",
-  "grn",
-  "org",
-  "gry",
-};
-const int redPin = D3;
-const int greenPin = D2;
-const int bluePin = D1;
-const int colorPins[3] = { redPin, greenPin, bluePin };
+const int colorPins[3] = { D0, D7, D8 };
 const int off[3] = { 0, 0, 0 };
 const int dim_yel[3] = { 100, 60, 0 };
 const int dim_red[3] = { 100, 0, 0 };
@@ -49,15 +47,14 @@ unsigned long flashInterval = 0;
 bool pressed = false;
 
 unsigned long lastDebounceTime = 0;
-unsigned long debounceDelay = 2000;
+unsigned long debounceDelay = 1000;
 
 void setup() {
   Serial.begin(115200);
-  // pinMode(btnPin, INPUT_PULLUP);
   for (int i=0; i<btnCount; i++) {
     pinMode(btns[i], INPUT_PULLUP);
   }
-  for (int thisColor = 0; thisColor < 3; thisColor++) {
+  for (int thisColor=0; thisColor<3; thisColor++) {
     pinMode(colorPins[thisColor], OUTPUT);
   }
   setRGB(off);
@@ -72,13 +69,13 @@ void setup() {
 }
 
 void setRGB(const int colRGB[3]) {
-  for (int thisColor = 0; thisColor < 3; thisColor++) {
+  for (int thisColor=0; thisColor<3; thisColor++) {
     analogWrite(colorPins[thisColor], colRGB[thisColor]);
   }
 }
 
 bool btnPressed(int btnPin) {
-  return digitalRead(btnPin) == LOW; // Low because pullup and ground connection
+  return digitalRead(btnPin) == LOW; // Low because the buttons connect to GND
 }
 
 bool anyPressed() {
@@ -110,6 +107,17 @@ void loop() {
 
     delay(100);
     return;
+  }
+
+  if (debugMode) {
+    if (millis() % 5000 == 0) {
+      for (int i=0; i<btnCount; i++) {
+        if (btnPressed(btns[i])) {
+          Serial.print("Pressing: "); Serial.println(btnIds[i]);
+        }
+      }
+      delay(100);
+    }
   }
 
   if (onUntil > 0 && onUntil < millis()) {
@@ -159,7 +167,9 @@ void getState() {
 }
 void onMessageCallback(WebsocketsMessage message) {
   setRGB(off); // This resets the LED, but also doubles to turn the LED off after connecting to WS
-  // "{\"rgb\":\"0,255,0\",\"for_ms\":1000}"
+
+  // Skip the initial confirmation message
+  if (strstr(message.c_str(), "\"confirm_subscription\"")) { return; }
 
   const char* rgbstart = strstr(message.c_str(), "\"rgb\":\""); // find the start of the "rgb" key
   if (rgbstart != NULL) {

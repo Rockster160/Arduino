@@ -1,49 +1,52 @@
 require "fileutils"
 require "pry-rails"
 
-D0 = :D0
-D5 = :D5
-D6 = :D6
-D7 = :D7
-D8 = :D8
-TX = :TX
-RX = :RX
-D1 = :D1
-D2 = :D2
-D3 = :D3
-D4 = :D4
+# Consts for easier more sensible setting of pins
+D0=:D0;D5=:D5;D6=:D6;D7=:D7;D8=:D8;TX=:TX;RX=:RX;D1=:D1;D2=:D2;D3=:D3;D4=:D4
 
 class Btn
-  def self.channel=(set_channel); @channel = set_channel; end
-  def self.wifi=(set_wifi); @wifi = set_wifi; end
-  def self.led=(pins); @ledpins = pins; end
-  def self.btns=(pin_data); @btndata = pin_data; end
+  def self.channel(set_channel) = @channel = set_channel
+  def self.wifi(set_wifi) = @wifi = set_wifi
+  def self.led(pins) = @ledpins = pins
+  def self.btns(pin_data) = @btndata = pin_data
 
-  def self.channel = @channel || :demo
-  def self.wifi
-    @wifi ||= :basement # :upstairs
-    "#{@wifi.to_s.capitalize}Wifi"
+  def self.data
+    {
+      channel: @channel || self.name.downcase,
+      wifi: "#{(@wifi || :basement).to_s.capitalize}Wifi", # basement | upstairs
+      led: @ledpins || [D0, D7, D8],
+      btns: @btndata || { blu: D4, org: D6, yel: D3, red: D2, wht: D1, grn: D5 },
+    }
   end
-  def self.led = @ledpins || [D0, D7, D8]
-  def self.btns = @btndata || { blu: D4, org: D6, yel: D3, red: D2, wht: D1, grn: D5 }
 end
 
 # ==================================================================================================
 
-class Desk < Btn
-  # channel = :ring
-  # wifi = :basement
-  led = [D0, D7, D8]
-  btns = {
-    busp: D4,
-    water: D6,
-    soda: D3,
-    protein: D2,
-  }
+class Demo < Btn
+  channel :ring
 end
 
-# class Grocery < Btn
-# end
+class Desk < Btn
+  channel :desk # optional - set by default (to name of class)
+  wifi :basement # optional - set by default
+  led [D0, D7, D8] # optional - set by default
+  btns(
+    busp:    D4,
+    water:   D3,
+    soda:    D2,
+    protein: D1,
+  )
+end
+
+class Teeth < Btn
+  led [D3, D2, D1]
+  btns teeth: D4
+end
+
+class Shower < Btn
+  led [D5, D2, D1]
+  btns shower: D4
+end
 
 # ==================================================================================================
 
@@ -87,41 +90,42 @@ end
 # Raise if "uploading" comment is found in src
 @raw = File.read(src).split("\n")
 
-# fail!("File is in incomplete state. May need to restore backup.") if @raw.first == "// uploading..."
-#
-# # Create backup of original file
-# FileUtils.cp(src, backup)
-# # Add `uploading` code so that we know the new file is modified
-# @raw.prepend("// uploading...")
-#
-# # Go through and replace with the new data
-# replace(
-#   "const String channelId = \"demo\";",
-#   "const String channelId = \"#{klass.channel}\";",
-# )
-# replace(
-#   "const int wifi = BasementWifi; // BasementWifi UpstairsWifi",
-#   "const int wifi = #{klass.wifi};"
-# )
-# replace(
-#   "const int btnCount = 6;",
-#   "const int btnCount = #{klass.btns.length};"
-# )
-# replace(
-#   "const String btnIds[btnCount] = {",
-#   "const String btnIds[btnCount] = { #{klass.btns.keys.map { |v| "\"#{v}\"" }.join(", ")} };"
-# )
-# replace(
-#   "const int btns[btnCount] = {",
-#   "const int btns[btnCount] = { #{klass.btns.values.join(", ")} };"
-# )
-# replace(
-#   "const int colorPins[3] = { D0, D7, D8 };",
-#   "const int colorPins[3] = { #{klass.led.join(", ")} };"
-# )
-# 
-# # Save the modified file
-# File.write(src, @raw.join("\n"))
+fail!("File is in incomplete state. May need to restore backup.") if @raw.first == "// uploading..."
+
+# Create backup of original file
+FileUtils.cp(src, backup)
+# Add `uploading` code so that we know the new file is modified
+@raw.prepend("// uploading...")
+
+# Go through and replace with the new data
+data = klass.data
+replace(
+  "const String channelId = \"demo\";",
+  "const String channelId = \"#{data[:channel]}\";",
+)
+replace(
+  "const int wifi = BasementWifi; // BasementWifi UpstairsWifi",
+  "const int wifi = #{data[:wifi]};"
+)
+replace(
+  "const int btnCount = 6;",
+  "const int btnCount = #{data[:btns].length};"
+)
+replace(
+  "const String btnIds[btnCount] = {",
+  "const String btnIds[btnCount] = { #{data[:btns].keys.map { |v| "\"#{v}\"" }.join(", ")} };"
+)
+replace(
+  "const int btns[btnCount] = {",
+  "const int btns[btnCount] = { #{data[:btns].values.join(", ")} };"
+)
+replace(
+  "const int colorPins[3] = { D0, D7, D8 };",
+  "const int colorPins[3] = { #{data[:led].join(", ")} };"
+)
+
+# Save the modified file
+File.write(src, @raw.join("\n"))
 # Upload to the ESP
 `arduino-cli compile --fqbn esp8266:esp8266:d1_mini espBtn && arduino-cli upload -p /dev/cu.usbserial-110 --fqbn esp8266:esp8266:d1_mini espBtn`
 # Restore the original file

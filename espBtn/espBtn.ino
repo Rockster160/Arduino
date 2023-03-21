@@ -209,7 +209,7 @@ void onMessageCallback(WebsocketsMessage message) {
         Serial.print("Until:");
         Serial.println(until);
       }
-      if (until > 0) {
+      if (until >= 0) {
         onUntil = millis() + until;
       }
     }
@@ -229,7 +229,7 @@ void onMessageCallback(WebsocketsMessage message) {
         Serial.print("Flash:");
         Serial.println(flash);
       }
-      if (flash > 0) {
+      if (flash >= 0) {
         flashInterval = flash;
       }
     }

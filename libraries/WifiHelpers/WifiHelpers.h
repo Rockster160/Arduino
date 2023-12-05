@@ -6,16 +6,19 @@
 #define UpstairsWifi 0
 #define BasementWifi 1
 
-bool debugMode = false;
+bool debugMode = true;
 
 struct wifiCred {
-  char* ssid;
-  char* password;
+  String ssid;
+  String password;
 };
 
-const char* authorization = "Basic Base64EncodedUsernameAndPassword";
-const wifiCred upstairs_creds = { "WifiSSID", "WifiPassword" };
-const wifiCred basement_creds = { "WifiSSID2", "WifiPassword" };
+// const char* authorization = "Basic Base64EncodedUsernameAndPassword";
+// const wifiCred upstairs_creds = { "WifiSSID", "WifiPassword" };
+// const wifiCred basement_creds = { "WifiSSID2", "WifiPassword" };
+const char* authorization = "Basic Um9ja3N0ZXIxNjA6Ynl6bWl4LXRvZGdJaC13b2piZTc="; // NOCOMMIT
+const wifiCred upstairs_creds = { "Nighthawk", "JuniperPoint!" }; // NOCOMMIT
+const wifiCred basement_creds = { "CenturyLink7046", "5ut8pd6rf8ek9v" }; // NOCOMMIT
 const wifiCred wifis[2] = { upstairs_creds, basement_creds };
 
 // const char* websockets_server = "ws://localhost:3141/cable";
@@ -37,6 +40,7 @@ int tiredRatio = 25;
 
 unsigned long wifiDebounceDelay = 2000;
 unsigned long lastWifiConnectTime = 0;
+unsigned long lastPingTime = 0;
 
 typedef void (*wsFnPtr)(WebsocketsMessage);
 static wsFnPtr fn_MessageCallback;
@@ -90,6 +94,8 @@ void _onMessageCallback(WebsocketsMessage message) {
       Serial.println(memFreePercent());
     }
     fn_MessageCallback(message);
+  } else {
+    lastPingTime = millis();
   }
 }
 
@@ -132,7 +138,6 @@ void connectWifi() {
 void checkMemory() {
   if (startFreeMem == 0) { startFreeMem = ESP.getFreeHeap(); }
   if (memoryCheckLast + memoryCheckdelay < millis()) {
-
     memoryCheckLast = millis();
     if (memoryCheckLast > napTime) { return ESP.restart(); }
     if (memoryCheckLast + windDownDelay > napTime) { return; } // Small delay before naptime to prevent restarting while in use

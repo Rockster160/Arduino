@@ -1,3 +1,11 @@
+# TODO:
+# Should log each time a "ping" broadcast comes in. Attempt to reconnect if nothing in 30 secs
+
+# esp btn bedroom
+
+# puts `zsh -c 'echo \'He\''`
+# `zsh -c "echo 'Sourcing...'; source ~/.zshrc; echo 'Uploading...'; esp espBtn"`
+
 require "fileutils"
 require "pry-rails"
 
@@ -13,7 +21,7 @@ class Btn
   def self.data
     {
       channel: @channel || self.name.downcase,
-      wifi: "#{(@wifi || :basement).to_s.capitalize}Wifi", # basement | upstairs
+      wifi: "#{(@wifi || :upstairs).to_s.capitalize}Wifi", # basement | upstairs
       led: @ledpins || [D0, D7, D8],
       btns: @btndata || { blu: D4, org: D6, yel: D3, red: D2, wht: D1, grn: D5 },
     }
@@ -23,12 +31,12 @@ end
 # ==================================================================================================
 
 class Demo < Btn
-  channel :ring
+  # channel :ring
 end
 
 class Desk < Btn
   channel :desk # optional - set by default (to name of class)
-  wifi :basement # optional - set by default
+  wifi :upstairs # optional - set by default
   led [D0, D7, D8] # optional - set by default
   btns(
     busp:    D4,
@@ -38,14 +46,29 @@ class Desk < Btn
   )
 end
 
+class Pullups < Btn
+  led [D3, D2, D1]
+  btns pullups: D4
+end
+
 class Teeth < Btn
   led [D3, D2, D1]
   btns teeth: D4
 end
 
+class Laundry < Btn
+  led [D4, D3, D2]
+  btns laundry: D1
+end
+
 class Shower < Btn
   led [D5, D2, D1]
   btns shower: D4
+end
+
+class Bedroom < Btn
+  led [D3, D2, D1]
+  btns ignore: D4
 end
 
 # ==================================================================================================
@@ -104,7 +127,7 @@ replace(
   "const String channelId = \"#{data[:channel]}\";",
 )
 replace(
-  "const int wifi = BasementWifi; // BasementWifi UpstairsWifi",
+  "const int wifi = UpstairsWifi; // BasementWifi UpstairsWifi",
   "const int wifi = #{data[:wifi]};"
 )
 replace(
@@ -127,6 +150,8 @@ replace(
 # Save the modified file
 File.write(src, @raw.join("\n"))
 # Upload to the ESP
-`arduino-cli compile --fqbn esp8266:esp8266:d1_mini espBtn && arduino-cli upload -p /dev/cu.usbserial-110 --fqbn esp8266:esp8266:d1_mini espBtn`
+puts "\e[33m[LOGIT] | Uploading....\e[0m"
+`zsh -c 'source ~/.zshrc && esp espBtn nomonitor'`
+puts "\e[33m[LOGIT] | Upload Complete\e[0m"
 # Restore the original file
 File.write(src, File.read(backup))

@@ -5,7 +5,7 @@
 
 // ================================ Configure
 const String channelId = "demo";
-const int wifi = BasementWifi; // BasementWifi UpstairsWifi
+const int wifi = UpstairsWifi; // BasementWifi UpstairsWifi
 // ================================ / Configure
 
 const int btnCount = 6;
@@ -60,9 +60,8 @@ void setup() {
   setRGB(off);
 
   wifiInit(
-    debugMode ? BasementWifi : wifi,
-    // Should probably authorize this...
-    String("{\"command\":\"subscribe\",\"identifier\":\"{\\\"channel\\\":\\\"TaskChannel\\\",\\\"channel_id\\\":\\\"") + channelId + String("\\\"}\"}"),
+    wifi,
+    String("{\"command\":\"subscribe\",\"identifier\":\"{\\\"channel\\\":\\\"MonitorChannel\\\",\\\"user_id\\\":1}\"}"),
     getState,
     onMessageCallback
   );
@@ -154,8 +153,8 @@ void loop() {
 }
 
 void post(String btnId) {
-  String str = "{\"command\":\"message\",\"identifier\":\"{\\\"channel\\\":\\\"TaskChannel\\\",\\\"channel_id\\\":\\\"" + channelId + "\\\"}\",\"data\":\"";
-  str += "{\\\"btn_id\\\":\\\"" + btnId + "\\\"}";
+  String str = "{\"command\":\"message\",\"identifier\":\"{\\\"channel\\\":\\\"MonitorChannel\\\",\\\"user_id\\\":1}\",\"data\":\"";
+  str += "{\\\"btn_id\\\":\\\"" + btnId + "\\\",\\\"channel_name\\\":\\\"" + channelId + "\\\"}";
   str += "\"}";
   client.send(str);
   if (debugMode) { Serial.print("Sent: "); Serial.println(btnId); }

@@ -8,7 +8,7 @@ const int leds[optCount] = { D8, D7, D6, D5, D0 };
 const int btns[optCount] = { D4, D3, D2, D1, RX };
 bool onList[optCount] = { false, false, false, false, false };
 
-const int listId = 1;
+const int listId = 175;
 const char* items[optCount] = { "Bread", "Eggs", "Milk", "Cheese", "Butter" };
 
 bool pressed = false;

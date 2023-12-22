@@ -31,16 +31,22 @@ WebsocketsClient client;
 bool wifiConnected = false; // Single use for initial connection and set up
 bool wsConnected = false;
 
-unsigned long napTime = 1000 * 60 * 60 * 24 * 2.3; // 4.3 days after startup
-unsigned long memoryCheckdelay = 1000 * 60; // One minute
-unsigned long windDownDelay = 1000 * 60 * 5; // Five minutes
-float startFreeMem = 0;
-unsigned long memoryCheckLast = 0;
-int tiredRatio = 25;
+unsigned long second = 1000;
+unsigned long minute = second * 60;
+unsigned long hour = minute * 60;
+unsigned long day = hour * 24;
 
-unsigned long wifiDebounceDelay = 2000;
+unsigned long napTime = day * 2.3; // 2.3 days after startup, perform a regular restart
+unsigned long memoryCheckdelay = minute;
+unsigned long windDownDelay = minute * 5; // Five minutes after high memory is detected, restart
+unsigned long lostDelay = 5 * second; // If no ping comes in for 5 seconds, assume lost connection and restart
+unsigned long wifiDebounceDelay = 2 * second;
+
+unsigned long memoryCheckLast = 0;
 unsigned long lastWifiConnectTime = 0;
 unsigned long lastPingTime = 0;
+float startFreeMem = 0;
+int tiredRatio = 25;
 
 typedef void (*wsFnPtr)(WebsocketsMessage);
 static wsFnPtr fn_MessageCallback;
@@ -74,7 +80,8 @@ void _onEventsCallback(WebsocketsEvent event, String data) {
     if (debugMode) { Serial.println("Connnection Closed"); }
     wsConnected = false;
   } else if (event == WebsocketsEvent::GotPing) {
-    if (debugMode) { Serial.println("Got a Ping!"); }
+    if (debugMode) { Serial.print("."); }
+    // if (debugMode) { Serial.println("Got a Ping!"); }
   } else if (event == WebsocketsEvent::GotPong) {
     if (debugMode) { Serial.println("Got a Pong!"); }
   }
@@ -101,9 +108,9 @@ void _onMessageCallback(WebsocketsMessage message) {
 
 void connectWifi() {
   if (millis() % 500 > 250) {
-    digitalWrite(D0, LOW);
+    digitalWrite(LED_BUILTIN, LOW);
   } else {
-    digitalWrite(D0, HIGH);
+    digitalWrite(LED_BUILTIN, HIGH);
   }
 
   if (millis() - lastWifiConnectTime < wifiDebounceDelay) { return; }
@@ -118,7 +125,7 @@ void connectWifi() {
   } else {
     if (WiFi.status() == WL_CONNECTED) {
       if (debugMode) { Serial.println("Wifi connected"); }
-      digitalWrite(D0, LOW);
+      digitalWrite(LED_BUILTIN, LOW);
       wifiConnected = true;
 
       WiFi.setAutoReconnect(true);
@@ -148,8 +155,16 @@ void checkMemory() {
   }
 }
 
+void checkConnection() {
+  if (lastPingTime == 0) { return; }
+  if (millis() - lastPingTime > lostDelay) {
+    return ESP.restart(); // We've lost connection, so just try to do a full restart
+  }
+}
+
 void wifiLoop() {
   checkMemory();
+  checkConnection();
 
   if (wsConnected) {
     client.poll();

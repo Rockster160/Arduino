@@ -29,6 +29,7 @@ const int btns[btnCount] = {
 };
 const int colorPins[3] = { D0, D7, D8 };
 const int off[3] = { 0, 0, 0 };
+const int dim_white[3] = { 30, 30, 30 };
 const int dim_yel[3] = { 100, 60, 0 };
 const int dim_red[3] = { 100, 0, 0 };
 
@@ -51,6 +52,7 @@ unsigned long debounceDelay = 1000;
 
 void setup() {
   Serial.begin(115200);
+  pinMode(LED_BUILTIN, OUTPUT);
   for (int i=0; i<btnCount; i++) {
     pinMode(btns[i], INPUT_PULLUP);
   }
@@ -91,7 +93,7 @@ void loop() {
     if (millis() % 600 > 300) {
       setRGB(off);
     } else {
-      setRGB(dim_red);
+      setRGB(dim_white);
     }
 
     delay(100);

@@ -89,8 +89,9 @@ bool anyPressed() {
 void loop() {
   wifiLoop(); // Wifi connection + retry
 
+  const int flashLength = 600;
   while (!wifiConnected) {
-    if (millis() % 600 > 300) {
+    if (millis() % flashLength > flashLength/2) {
       setRGB(off);
     } else {
       setRGB(dim_white);
@@ -100,7 +101,7 @@ void loop() {
     return;
   }
   while (!wsConnected) {
-    if (millis() % 600 > 300) {
+    if (millis() % flashLength > flashLength/2) {
       setRGB(off);
     } else {
       setRGB(dim_yel);

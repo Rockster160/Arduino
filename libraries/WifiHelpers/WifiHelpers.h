@@ -94,11 +94,12 @@ float memFreePercent() {
 
 void _onMessageCallback(WebsocketsMessage message) {
   if (!strstr(message.c_str(), "\"type\":\"ping\"")) {
-    if (debugMode) { Serial.print("Got Message: "); }
-    if (debugMode) { Serial.println(message.c_str()); }
     if (debugMode) {
+      Serial.print("Got Message: ");
+      Serial.println(message.c_str());
       Serial.print("Mem: ");
-      Serial.println(memFreePercent());
+      Serial.print(memFreePercent());
+      Serial.println("%");
     }
     fn_MessageCallback(message);
   } else {
@@ -146,7 +147,10 @@ void checkMemory() {
   if (startFreeMem == 0) { startFreeMem = ESP.getFreeHeap(); }
   if (memoryCheckLast + memoryCheckdelay < millis()) {
     memoryCheckLast = millis();
-    if (memoryCheckLast > napTime) { return ESP.restart(); }
+    if (memoryCheckLast > napTime) {
+      Serial.println("Memory over threshold. Restarting...");
+      return ESP.restart();
+    }
     if (memoryCheckLast + windDownDelay > napTime) { return; } // Small delay before naptime to prevent restarting while in use
 
     if (memFreePercent() < tiredRatio) {
@@ -158,7 +162,8 @@ void checkMemory() {
 void checkConnection() {
   if (lastPingTime == 0) { return; }
   if (millis() - lastPingTime > lostDelay) {
-    return ESP.restart(); // We've lost connection, so just try to do a full restart
+    Serial.println("Lost Connection... Restarting...");
+    return ESP.restart();
   }
 }
 
